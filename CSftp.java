@@ -14,6 +14,7 @@ public class CSftp {
 
     public static void main(String [] args) {
         byte cmdString[] = new byte[MAX_LEN];
+        String command;
 
         // Get command line arguments and connected to FTP
         // If the arguments are invalid or there aren't enough of them
@@ -28,6 +29,8 @@ public class CSftp {
             for (int len = 1; len > 0;) {
                 System.out.print("csftp> ");
                 len = System.in.read(cmdString);
+                command = new String(cmdString);
+                System.out.println(command);
                 if (len <= 0)
                     break;
                 // Start processing the command here.
