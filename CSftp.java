@@ -2,6 +2,9 @@
 import java.lang.System;
 import java.io.IOException;
 
+import java.io.*;
+import java.net.*;
+
 import java.util.Arrays;
 
 //
@@ -27,26 +30,42 @@ public class CSftp {
             return;
         }
 
-        try {
-            for (int len = 1; len > 0;) {
-                System.out.print("csftp> ");
-                len = System.in.read(cmdString);
+        String hostName = args[0];
+        int hostPort = Integer.parseInt(args[1]);
 
-                command = (new String(Arrays.copyOfRange(cmdString, 0, len-1)));
+        try (
+            // create a socket
+            Socket socket = new Socket(hostName, hostPort);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        ) {
+            try {
+                for (int len = 1; len > 0;) {
+                    System.out.print("csftp> ");
+                    len = System.in.read(cmdString);
 
-                if (len <= 0)
-                    break;
+                    command = (new String(Arrays.copyOfRange(cmdString, 0, len-1)));
 
-                // Start processing the command here.
-                if (command.equals("quit")) {
-                    // exit the program
-                    break;
+                    if (len <= 0)
+                        break;
+
+                    // Start processing the command here.
+                    if (command.equals("quit")) {
+                        // break the command input loop, exit the program
+                        break;
+                    }
+
+                    System.out.println("900 Invalid command.");
                 }
-
-                System.out.println("900 Invalid command.");
+            } catch (IOException exception) {
+                System.err.println("998 Input error while reading commands, terminating.");
             }
-        } catch (IOException exception) {
-            System.err.println("998 Input error while reading commands, terminating.");
+        } catch (UnknownHostException e) {
+            System.err.println("0xFFFC Control connection to " + hostName + " on port " + hostPort + " failed to open.");
+            // System.exit(1);
+        } catch (IOException e) {
+            System.err.println("0xFFFD Control connection I/O error, closing control connection.");
+            // System.exit(1);
         }
     }
 }
