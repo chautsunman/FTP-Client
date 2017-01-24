@@ -51,11 +51,24 @@ public class CSftp {
 
                     // Start processing the command here.
                     if (command.equals("quit")) {
+                        // close the connection
+                        out.println("QUIT");
+
+                        // TODO: check if the connection is closed
+
                         // break the command input loop, exit the program
                         break;
                     }
 
-                    System.out.println("900 Invalid command.");
+                    if (command.split(" ").length == 2 && command.split(" ")[0].equals("user")) {
+                        // user USERNAME
+                        userCommand(out, command.split(" ")[1], in);
+                    } else if (command.split(" ").length == 2 && command.split(" ")[0].equals("pw")) {
+                        // pw PASSWORD
+                        pwCommand(out, command.split(" ")[1], in);
+                    } else {
+                        System.out.println("900 Invalid command.");
+                    }
                 }
             } catch (IOException exception) {
                 System.err.println("998 Input error while reading commands, terminating.");
@@ -67,5 +80,19 @@ public class CSftp {
             System.err.println("0xFFFD Control connection I/O error, closing control connection.");
             // System.exit(1);
         }
+    }
+
+    private static void userCommand(PrintWriter out, String user, BufferedReader in) {
+        System.out.println("userCommand");
+
+        out.println("USER " + user);
+        // System.out.println(in.readLine());
+    }
+
+    private static void pwCommand(PrintWriter out, String pw, BufferedReader in) {
+        System.out.println("pwCommand");
+
+        out.println("PASS " + pw);
+        // System.out.println(in.readLine());
     }
 }
