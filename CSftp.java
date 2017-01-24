@@ -2,6 +2,8 @@
 import java.lang.System;
 import java.io.IOException;
 
+import java.util.Arrays;
+
 //
 // This is an implementation of a simplified version of a command
 // line ftp client. The program always takes two arguments
@@ -29,11 +31,18 @@ public class CSftp {
             for (int len = 1; len > 0;) {
                 System.out.print("csftp> ");
                 len = System.in.read(cmdString);
-                command = new String(cmdString);
-                System.out.println(command);
+
+                command = (new String(Arrays.copyOfRange(cmdString, 0, len-1)));
+
                 if (len <= 0)
                     break;
+
                 // Start processing the command here.
+                if (command.equals("quit")) {
+                    // exit the program
+                    break;
+                }
+
                 System.out.println("900 Invalid command.");
             }
         } catch (IOException exception) {
