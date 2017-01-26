@@ -68,6 +68,9 @@ public class CSftp {
                     } else if (command.split(" ").length == 2 && command.split(" ")[0].equals("pw")) {
                         // pw PASSWORD
                         sendRequest(out, "PASS " + command.split(" ")[1], in);
+                    } else if (command.equals("features")) {
+                        // features
+                        sendRequest(out, "FEAT", in);
                     } else {
                         System.out.println("900 Invalid command.");
                     }
