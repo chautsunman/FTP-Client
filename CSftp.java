@@ -54,8 +54,7 @@ public class CSftp {
                     // Start processing the command here.
                     if (command.equals("quit")) {
                         // close the connection
-                        out.println("QUIT");
-                        printResponse(in);
+                        sendRequest(out, "QUIT", in);
 
                         // TODO: check if the connection is closed
 
@@ -65,10 +64,10 @@ public class CSftp {
 
                     if (command.split(" ").length == 2 && command.split(" ")[0].equals("user")) {
                         // user USERNAME
-                        userCommand(out, command.split(" ")[1], in);
+                        sendRequest(out, "USER " + command.split(" ")[1], in);
                     } else if (command.split(" ").length == 2 && command.split(" ")[0].equals("pw")) {
                         // pw PASSWORD
-                        pwCommand(out, command.split(" ")[1], in);
+                        sendRequest(out, "PASS " + command.split(" ")[1], in);
                     } else {
                         System.out.println("900 Invalid command.");
                     }
@@ -85,17 +84,10 @@ public class CSftp {
         }
     }
 
-    private static void userCommand(PrintWriter out, String user, BufferedReader in) {
-        System.out.println("userCommand");
+    private static void sendRequest(PrintWriter out, String command, BufferedReader in) {
+        System.out.println(command);
 
-        out.println("USER " + user);
-        printResponse(in);
-    }
-
-    private static void pwCommand(PrintWriter out, String pw, BufferedReader in) {
-        System.out.println("pwCommand");
-
-        out.println("PASS " + pw);
+        out.println(command);
         printResponse(in);
     }
 
