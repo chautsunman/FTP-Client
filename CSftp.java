@@ -39,6 +39,8 @@ public class CSftp {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         ) {
+            printResponse(in);
+
             try {
                 for (int len = 1; len > 0;) {
                     System.out.print("csftp> ");
@@ -53,6 +55,7 @@ public class CSftp {
                     if (command.equals("quit")) {
                         // close the connection
                         out.println("QUIT");
+                        printResponse(in);
 
                         // TODO: check if the connection is closed
 
@@ -86,13 +89,23 @@ public class CSftp {
         System.out.println("userCommand");
 
         out.println("USER " + user);
-        // System.out.println(in.readLine());
+        printResponse(in);
     }
 
     private static void pwCommand(PrintWriter out, String pw, BufferedReader in) {
         System.out.println("pwCommand");
 
         out.println("PASS " + pw);
-        // System.out.println(in.readLine());
+        printResponse(in);
+    }
+
+    private static void printResponse(BufferedReader in) {
+        try {
+            // TODO: print all responses
+            System.out.println(in.readLine());
+        } catch (IOException e) {
+            // TODO: print error message
+            System.out.println("0xFFFF Processing error.");
+        }
     }
 }
