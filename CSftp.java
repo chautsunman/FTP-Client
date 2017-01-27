@@ -56,7 +56,8 @@ public class CSftp {
                         // close the connection
                         sendRequest(out, "QUIT", in);
 
-                        // TODO: check if the connection is closed
+                        // close the socket
+                        closeSocket(socket);
 
                         // break the command input loop, exit the program
                         break;
@@ -88,7 +89,7 @@ public class CSftp {
     }
 
     private static void sendRequest(PrintWriter out, String command, BufferedReader in) {
-        System.out.println(command);
+        System.out.println("--> " + command);
 
         out.println(command);
         printResponse(in);
@@ -97,10 +98,19 @@ public class CSftp {
     private static void printResponse(BufferedReader in) {
         try {
             // TODO: print all responses
-            System.out.println(in.readLine());
+            System.out.println("<-- " + in.readLine());
         } catch (IOException e) {
             // TODO: print error message
             System.out.println("0xFFFF Processing error.");
+        }
+    }
+
+    private static void closeSocket(Socket socket) {
+        try {
+            socket.close();
+        } catch (IOException e) {
+            System.out.println("0xFFFF Processing error. Cannot close the socket, terminating.");
+            // System.exit(1);
         }
     }
 }
