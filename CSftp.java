@@ -72,6 +72,9 @@ public class CSftp {
                     } else if (command.equals("features")) {
                         // features
                         sendRequest(out, "FEAT", in);
+                    } else if (command.split(" ").length == 2 && command.split(" ")[0].equals("cd")) {
+                        // cd DIRECTORY
+                        sendRequest(out, "CWD " + command.split(" ")[1], in);
                     } else {
                         System.out.println("900 Invalid command.");
                     }
