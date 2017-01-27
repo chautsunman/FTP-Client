@@ -39,6 +39,9 @@ public class CSftp {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         ) {
+            // set socket timeout for reading responses
+            socket.setSoTimeout(500);
+
             printResponse(in);
 
             try {
@@ -100,8 +103,12 @@ public class CSftp {
 
     private static void printResponse(BufferedReader in) {
         try {
-            // TODO: print all responses
-            System.out.println("<-- " + in.readLine());
+            String response;
+            while ((response = in.readLine()) != null) {
+                System.out.println("<-- " + response);
+            }
+        } catch (SocketTimeoutException e) {
+            // stop waiting for more responses
         } catch (IOException e) {
             // TODO: print error message
             System.out.println("0xFFFF Processing error.");
