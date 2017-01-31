@@ -122,85 +122,129 @@ public class CSftp {
     }
 
     private static void listDirectory(PrintWriter out, BufferedReader in) {
-        Socket dataSocket = createDataConnection(out, in);
+        // create the data connection
+        DataConnection.createDataConnection(out, in);
+
+        BufferedReader dataIn = DataConnection.getDataIn();
+
+        // list all the files
+        System.out.println(REQUEST_PREFIX + "LIST");
+        out.println("LIST");
+
+        // print all responses
+        printResponse(in);
+        printResponse(dataIn);
+
+        // close the data connection
+        DataConnection.closeDataConnection();
     }
 
-    private static Socket createDataConnection(PrintWriter out, BufferedReader in) {
-        DataConnectionData dataConnectionData = getDataConnectionData(out, in);
-
-        if (dataConnectionData != null) {
-            String host = dataConnectionData.getHost();
-            int port = dataConnectionData.getPort();
-
-            try {
-                return new Socket(host, port);
-            } catch (UnknownHostException e) {
-                System.out.println("0x3A2 Data transfer connection to " + host + " on port " + port + " failed to open.");
-            } catch (IOException e) {
-                System.err.println("0x3A7 Data transfer connection I/O error, closing data connection.");
-            }
-        } else {
-            return null;
-        }
-
-        return null;
-    }
-
-    private static DataConnectionData getDataConnectionData(PrintWriter out, BufferedReader in) {
-        System.out.println(REQUEST_PREFIX + "PASV");
-
-        out.println("PASV");
-
-        try {
-            String response = in.readLine();
-
-            System.out.println(RESPONSE_PREFIX + response);
-
-            return new DataConnectionData(response);
-        } catch (SocketTimeoutException e) {
-            // stop waiting for responses
-            return null;
-        } catch (IOException e) {
-            // TODO: print error message
-            System.out.println("0xFFFF Processing error.");
-        }
-
-        return null;
-    }
-
-    private static void closeSocket(Socket socket) {
+    private static boolean closeSocket(Socket socket) {
         try {
             socket.close();
         } catch (IOException e) {
             System.out.println("0xFFFF Processing error. Cannot close the socket, terminating.");
             // System.exit(1);
+        } finally {
+            return socket.isClosed();
         }
     }
 
 
-    private static class DataConnectionData {
-        String host;
-        int port;
+    private static class DataConnection {
+        static Socket dataSocket;
+        static BufferedReader dataIn;
 
-        public DataConnectionData(String passiveRequestResponse) {
-            parseResponse(passiveRequestResponse);
+        public static Socket getDataSocket() {
+            return dataSocket;
         }
 
-        public String getHost() {
-            return host;
+        public static BufferedReader getDataIn() {
+            return dataIn;
         }
 
-        public int getPort() {
-            return port;
+        public static void createDataConnection(PrintWriter out, BufferedReader in) {
+            DataConnectionData dataConnectionData = getDataConnectionData(out, in);
+
+            if (dataConnectionData != null) {
+                String host = dataConnectionData.getHost();
+                int port = dataConnectionData.getPort();
+
+                try {
+                    dataSocket = new Socket(host, port);
+                    dataSocket.setSoTimeout(500);
+                    dataIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+                } catch (UnknownHostException e) {
+                    System.out.println("0x3A2 Data transfer connection to " + host + " on port " + port + " failed to open.");
+                } catch (IOException e) {
+                    System.err.println("0x3A7 Data transfer connection I/O error, closing data connection.");
+                }
+            }
         }
 
-        private void parseResponse(String response) {
-            int openParenthesisIndex = response.indexOf("(");
-            int closingParenthesisIndex = response.indexOf(")");
-            String[] hostsPortsNumbers = response.substring(openParenthesisIndex+1, closingParenthesisIndex).split(",");
+        private static DataConnectionData getDataConnectionData(PrintWriter out, BufferedReader in) {
+            System.out.println(REQUEST_PREFIX + "PASV");
 
-            host = hostsPortsNumbers[0] + "." + hostsPortsNumbers[1] + "." + hostsPortsNumbers[2] + "." + hostsPortsNumbers[3];
-            port = Integer.parseInt(hostsPortsNumbers[4]) * 256 + Integer.parseInt(hostsPortsNumbers[5]);
+            out.println("PASV");
+
+            try {
+                String response = in.readLine();
+
+                System.out.println(RESPONSE_PREFIX + response);
+
+                return new DataConnectionData(response);
+            } catch (SocketTimeoutException e) {
+                // stop waiting for responses
+                return null;
+            } catch (IOException e) {
+                // TODO: print error message
+                System.out.println("0xFFFF Processing error.");
+            }
+
+            return null;
+        }
+
+        private static boolean closeDataConnection() {
+            try {
+                dataSocket.close();
+            } catch (IOException e) {
+                System.out.println("0xFFFF Processing error. Cannot close the socket, terminating.");
+                // System.exit(1);
+            } finally {
+                boolean socketClosed = dataSocket.isClosed();
+
+                dataSocket = null;
+                dataIn = null;
+
+                return socketClosed;
+            }
+        }
+
+
+        private static class DataConnectionData {
+            String host;
+            int port;
+
+            public DataConnectionData(String passiveRequestResponse) {
+                parseResponse(passiveRequestResponse);
+            }
+
+            public String getHost() {
+                return host;
+            }
+
+            public int getPort() {
+                return port;
+            }
+
+            private void parseResponse(String response) {
+                int openParenthesisIndex = response.indexOf("(");
+                int closingParenthesisIndex = response.indexOf(")");
+                String[] hostsPortsNumbers = response.substring(openParenthesisIndex+1, closingParenthesisIndex).split(",");
+
+                host = hostsPortsNumbers[0] + "." + hostsPortsNumbers[1] + "." + hostsPortsNumbers[2] + "." + hostsPortsNumbers[3];
+                port = Integer.parseInt(hostsPortsNumbers[4]) * 256 + Integer.parseInt(hostsPortsNumbers[5]);
+            }
         }
     }
 }
