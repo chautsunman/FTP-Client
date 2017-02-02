@@ -65,7 +65,6 @@ public class CSftp {
                 } catch (IOException exception) {
                     System.err.println("0xFFFE Input error while reading commands, terminating.");
                     closeSocket(socket);
-                    socket = null;
                     System.exit(1);
                 }
 
@@ -120,8 +119,6 @@ public class CSftp {
             System.exit(1);
         } catch (IOException e) {
             System.err.println("0xFFFD Control connection I/O error, closing control connection.");
-            closeSocket(socket);
-            socket = null;
             System.exit(1);
         }
     }
