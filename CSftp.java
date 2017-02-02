@@ -58,66 +58,71 @@ public class CSftp {
 
             printResponse(in);
 
-            try {
-                for (int len = 1; len > 0;) {
-                    System.out.print("csftp> ");
+            for (int len = 1; len > 0;) {
+                System.out.print("csftp> ");
+                try {
                     len = System.in.read(cmdString);
-
-                    command = (new String(Arrays.copyOfRange(cmdString, 0, len-1)));
-
-                    if (len <= 0)
-                        break;
-
-                    // Start processing the command here.
-                    if (command.equals("quit")) {
-                        // close the connection
-                        sendRequest(out, "QUIT", in);
-
-                        // close the socket
-                        closeSocket(socket);
-
-                        // break the command input loop, exit the program
-                        break;
-                    }
-
-                    String[] commandSplit = command.split(" ");
-                    int commandSplitLen = commandSplit.length;
-
-                    if (commandSplitLen == 2 && commandSplit[0].equals("user")) {
-                        // user USERNAME
-                        sendRequest(out, "USER " + commandSplit[1], in);
-                    } else if (commandSplitLen == 2 && commandSplit[0].equals("pw")) {
-                        // pw PASSWORD
-                        sendRequest(out, "PASS " + commandSplit[1], in);
-                    } else if (command.equals("features")) {
-                        // features
-                        sendRequest(out, "FEAT", in);
-                    } else if (commandSplitLen == 2 && commandSplit[0].equals("cd")) {
-                        // cd DIRECTORY
-                        sendRequest(out, "CWD " + commandSplit[1], in);
-                    } else if (command.equals("dir")) {
-                        // dir
-                        listDirectory(out, in);
-                    } else if (commandSplitLen == 2 && commandSplit[0].equals("get")) {
-                        // get REMOTE
-                        getFile(out, commandSplit[1], in);
-                    } else if (!isValidCommand(command)) {
-                        // the command is not one of the supported commands
-                        System.out.println("0x001 Invalid command.");
-                    } else {
-                        // the command is one of the supported commands, but it does not match the usage pattern
-                        System.out.println("0x002 Incorrect number of arguments");
-                    }
+                } catch (IOException exception) {
+                    System.err.println("0xFFFE Input error while reading commands, terminating.");
+                    closeSocket(socket);
+                    socket = null;
+                    System.exit(1);
                 }
-            } catch (IOException exception) {
-                System.err.println("998 Input error while reading commands, terminating.");
+
+                command = (new String(Arrays.copyOfRange(cmdString, 0, len-1)));
+
+                if (len <= 0)
+                    break;
+
+                // Start processing the command here.
+                if (command.equals("quit")) {
+                    // close the connection
+                    sendRequest(out, "QUIT", in);
+
+                    // close the socket
+                    closeSocket(socket);
+
+                    // break the command input loop, exit the program
+                    break;
+                }
+
+                String[] commandSplit = command.split(" ");
+                int commandSplitLen = commandSplit.length;
+
+                if (commandSplitLen == 2 && commandSplit[0].equals("user")) {
+                    // user USERNAME
+                    sendRequest(out, "USER " + commandSplit[1], in);
+                } else if (commandSplitLen == 2 && commandSplit[0].equals("pw")) {
+                    // pw PASSWORD
+                    sendRequest(out, "PASS " + commandSplit[1], in);
+                } else if (command.equals("features")) {
+                    // features
+                    sendRequest(out, "FEAT", in);
+                } else if (commandSplitLen == 2 && commandSplit[0].equals("cd")) {
+                    // cd DIRECTORY
+                    sendRequest(out, "CWD " + commandSplit[1], in);
+                } else if (command.equals("dir")) {
+                    // dir
+                    listDirectory(out, in);
+                } else if (commandSplitLen == 2 && commandSplit[0].equals("get")) {
+                    // get REMOTE
+                    getFile(out, commandSplit[1], in);
+                } else if (!isValidCommand(command)) {
+                    // the command is not one of the supported commands
+                    System.out.println("0x001 Invalid command.");
+                } else {
+                    // the command is one of the supported commands, but it does not match the usage pattern
+                    System.out.println("0x002 Incorrect number of arguments");
+                }
             }
         } catch (UnknownHostException e) {
             System.err.println("0xFFFC Control connection to " + hostName + " on port " + hostPort + " failed to open.");
-            // System.exit(1);
+            System.exit(1);
         } catch (IOException e) {
             System.err.println("0xFFFD Control connection I/O error, closing control connection.");
-            // System.exit(1);
+            closeSocket(socket);
+            socket = null;
+            System.exit(1);
         }
     }
 
@@ -150,8 +155,8 @@ public class CSftp {
         } catch (SocketTimeoutException e) {
             // stop waiting for more responses
         } catch (IOException e) {
-            // TODO: print error message
-            System.out.println("0xFFFF Processing error.");
+            System.out.println("0xFFFF Processing error. Reading response IO error, terminating.");
+            System.exit(1);
         }
     }
 
@@ -197,14 +202,15 @@ public class CSftp {
                 fileOutputStream.write(b);
             }
         } catch (IOException e) {
-            // TODO: print error message
-            System.out.println("0xFFFF Processing error.");
+            System.out.println("0xFFFF Processing error. Writing file IO error, terminating.");
+            System.exit(1);
         } finally {
             if (fileOutputStream != null) {
                 try {
                     fileOutputStream.close();
                 } catch (IOException e) {
                     System.out.println("0xFFFF Processing error. Cannot close the file output stream, terminating.");
+                    System.exit(1);
                 }
             }
         }
@@ -217,11 +223,15 @@ public class CSftp {
     }
 
     private static boolean closeSocket(Socket socket) {
+        if (socket == null || socket.isClosed()) {
+            return true;
+        }
+
         try {
             socket.close();
         } catch (IOException e) {
             System.out.println("0xFFFF Processing error. Cannot close the socket, terminating.");
-            // System.exit(1);
+            System.exit(1);
         } finally {
             return socket.isClosed();
         }
@@ -259,8 +269,10 @@ public class CSftp {
                     dataIn = new BufferedReader(new InputStreamReader(dataInputStream));
                 } catch (UnknownHostException e) {
                     System.out.println("0x3A2 Data transfer connection to " + host + " on port " + port + " failed to open.");
+                    System.exit(1);
                 } catch (IOException e) {
                     System.err.println("0x3A7 Data transfer connection I/O error, closing data connection.");
+                    System.exit(1);
                 }
             }
         }
@@ -280,23 +292,28 @@ public class CSftp {
                 // stop waiting for responses
                 return null;
             } catch (IOException e) {
-                // TODO: print error message
-                System.out.println("0xFFFF Processing error.");
+                System.out.println("0xFFFF Processing error. Reading response IO error, terminating.");
+                System.exit(1);
             }
 
             return null;
         }
 
         private static boolean closeDataConnection() {
+            if (dataSocket == null || dataSocket.isClosed()) {
+                return true;
+            }
+
             try {
                 dataSocket.close();
             } catch (IOException e) {
                 System.out.println("0xFFFF Processing error. Cannot close the socket, terminating.");
-                // System.exit(1);
+                System.exit(1);
             } finally {
                 boolean socketClosed = dataSocket.isClosed();
 
                 dataSocket = null;
+                dataInputStream = null;
                 dataIn = null;
 
                 return socketClosed;
