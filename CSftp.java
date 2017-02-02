@@ -20,6 +20,17 @@ public class CSftp {
     static final String REQUEST_PREFIX = "--> ";
     static final String RESPONSE_PREFIX = "<-- ";
 
+    // array of supported (valid) commands
+    static final String[] validCommands = {
+        "quit",
+        "user",
+        "pw",
+        "cd",
+        "dir",
+        "get",
+        "features"
+    };
+
     public static void main(String [] args) {
         byte cmdString[] = new byte[MAX_LEN];
         String command;
@@ -69,26 +80,33 @@ public class CSftp {
                         break;
                     }
 
-                    if (command.split(" ").length == 2 && command.split(" ")[0].equals("user")) {
+                    String[] commandSplit = command.split(" ");
+                    int commandSplitLen = commandSplit.length;
+
+                    if (commandSplitLen == 2 && commandSplit[0].equals("user")) {
                         // user USERNAME
-                        sendRequest(out, "USER " + command.split(" ")[1], in);
-                    } else if (command.split(" ").length == 2 && command.split(" ")[0].equals("pw")) {
+                        sendRequest(out, "USER " + commandSplit[1], in);
+                    } else if (commandSplitLen == 2 && commandSplit[0].equals("pw")) {
                         // pw PASSWORD
-                        sendRequest(out, "PASS " + command.split(" ")[1], in);
+                        sendRequest(out, "PASS " + commandSplit[1], in);
                     } else if (command.equals("features")) {
                         // features
                         sendRequest(out, "FEAT", in);
-                    } else if (command.split(" ").length == 2 && command.split(" ")[0].equals("cd")) {
+                    } else if (commandSplitLen == 2 && commandSplit[0].equals("cd")) {
                         // cd DIRECTORY
-                        sendRequest(out, "CWD " + command.split(" ")[1], in);
+                        sendRequest(out, "CWD " + commandSplit[1], in);
                     } else if (command.equals("dir")) {
                         // dir
                         listDirectory(out, in);
-                    } else if (command.split(" ").length == 2 && command.split(" ")[0].equals("get")) {
+                    } else if (commandSplitLen == 2 && commandSplit[0].equals("get")) {
                         // get REMOTE
-                        getFile(out, command.split(" ")[1], in);
+                        getFile(out, commandSplit[1], in);
+                    } else if (!isValidCommand(command)) {
+                        // the command is not one of the supported commands
+                        System.out.println("0x001 Invalid command.");
                     } else {
-                        System.out.println("900 Invalid command.");
+                        // the command is one of the supported commands, but it does not match the usage pattern
+                        System.out.println("0x002 Incorrect number of arguments");
                     }
                 }
             } catch (IOException exception) {
@@ -101,6 +119,19 @@ public class CSftp {
             System.err.println("0xFFFD Control connection I/O error, closing control connection.");
             // System.exit(1);
         }
+    }
+
+    // check if the command is supported (valid)
+    private static boolean isValidCommand(String command) {
+        String mainCommand = command.split(" ")[0];
+
+        for (String validCommand : validCommands) {
+            if (mainCommand.equals(validCommand)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void sendRequest(PrintWriter out, String command, BufferedReader in) {
