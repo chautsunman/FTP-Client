@@ -84,6 +84,9 @@ public class CSftp {
                     } else if (command.equals("dir")) {
                         // dir
                         listDirectory(out, in);
+                    } else if (command.split(" ").length == 2 && command.split(" ")[0].equals("get")) {
+                        // get REMOTE
+                        getFile(out, command.split(" ")[1], in);
                     } else {
                         System.out.println("900 Invalid command.");
                     }
@@ -139,6 +142,49 @@ public class CSftp {
         DataConnection.closeDataConnection();
     }
 
+    private static void getFile(PrintWriter out, String fileName, BufferedReader in) {
+        // create the data connection
+        DataConnection.createDataConnection(out, in);
+
+        InputStream dataInputStream = DataConnection.getDataInputStream();
+
+        // get the file
+        System.out.println(REQUEST_PREFIX + "RETR " + fileName);
+        out.println("RETR " + fileName);
+
+        // print all responses
+        printResponse(in);
+
+        // write the file
+        FileOutputStream fileOutputStream = null;
+        try {
+            fileOutputStream = new FileOutputStream(fileName);
+
+            int b;
+
+            while ((b = dataInputStream.read()) != -1) {
+                fileOutputStream.write(b);
+            }
+        } catch (IOException e) {
+            // TODO: print error message
+            System.out.println("0xFFFF Processing error.");
+        } finally {
+            if (fileOutputStream != null) {
+                try {
+                    fileOutputStream.close();
+                } catch (IOException e) {
+                    System.out.println("0xFFFF Processing error. Cannot close the file output stream, terminating.");
+                }
+            }
+        }
+
+        // print all remaining control responses
+        printResponse(in);
+
+        // close the data connection
+        DataConnection.closeDataConnection();
+    }
+
     private static boolean closeSocket(Socket socket) {
         try {
             socket.close();
@@ -153,10 +199,15 @@ public class CSftp {
 
     private static class DataConnection {
         static Socket dataSocket;
+        static InputStream dataInputStream;
         static BufferedReader dataIn;
 
         public static Socket getDataSocket() {
             return dataSocket;
+        }
+
+        public static InputStream getDataInputStream() {
+            return dataInputStream;
         }
 
         public static BufferedReader getDataIn() {
@@ -173,7 +224,8 @@ public class CSftp {
                 try {
                     dataSocket = new Socket(host, port);
                     dataSocket.setSoTimeout(500);
-                    dataIn = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+                    dataInputStream = dataSocket.getInputStream();
+                    dataIn = new BufferedReader(new InputStreamReader(dataInputStream));
                 } catch (UnknownHostException e) {
                     System.out.println("0x3A2 Data transfer connection to " + host + " on port " + port + " failed to open.");
                 } catch (IOException e) {
