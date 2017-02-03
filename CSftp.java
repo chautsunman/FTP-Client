@@ -195,8 +195,33 @@ public class CSftp {
             System.out.println(REQUEST_PREFIX + "RETR " + fileName);
             out.println("RETR " + fileName);
 
+            boolean fileNotFound = false;
+
+            try {
+                String response = in.readLine();
+
+                System.out.println(RESPONSE_PREFIX + response);
+
+                if (response.substring(0, 3).equals("550")) {
+                    fileNotFound = true;
+                }
+            } catch (SocketTimeoutException e) {
+                // stop waiting for more responses
+            } catch (IOException e) {
+                System.out.println("0xFFFF Processing error. Reading response IO error, terminating.");
+                System.exit(1);
+            }
+
             // print all responses
             printResponse(in);
+
+            // return if the file is not found on the server
+            if (fileNotFound) {
+                // close the data connection
+                DataConnection.closeDataConnection();
+
+                return;
+            }
 
             // write the file
             FileOutputStream fileOutputStream = null;
@@ -208,9 +233,12 @@ public class CSftp {
                 while ((b = dataInputStream.read()) != -1) {
                     fileOutputStream.write(b);
                 }
-            } catch (IOException e) {
-                System.out.println("0xFFFF Processing error. Writing file IO error, terminating.");
+            } catch (SocketTimeoutException e) {
+                // stop waiting for more responses
+                System.out.println("0xFFFF Processing error. File may not be completely retrieved, terminating.");
                 System.exit(1);
+            } catch (IOException e) {
+                System.out.println("0x38E Access to local file " + fileName + " denied.");
             } finally {
                 if (fileOutputStream != null) {
                     try {
