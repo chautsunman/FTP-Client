@@ -167,64 +167,68 @@ public class CSftp {
 
     private static void listDirectory(PrintWriter out, BufferedReader in) {
         // create the data connection
-        DataConnection.createDataConnection(out, in);
+        if (DataConnection.createDataConnection(out, in)) {
+            BufferedReader dataIn = DataConnection.getDataIn();
 
-        BufferedReader dataIn = DataConnection.getDataIn();
+            // list all the files
+            System.out.println(REQUEST_PREFIX + "LIST");
+            out.println("LIST");
 
-        // list all the files
-        System.out.println(REQUEST_PREFIX + "LIST");
-        out.println("LIST");
+            // print all responses
+            printResponse(in);
+            printResponse(dataIn);
 
-        // print all responses
-        printResponse(in);
-        printResponse(dataIn);
-
-        // close the data connection
-        DataConnection.closeDataConnection();
+            // close the data connection
+            DataConnection.closeDataConnection();
+        } else {
+            printResponse(in);
+        }
     }
 
     private static void getFile(PrintWriter out, String fileName, BufferedReader in) {
         // create the data connection
-        DataConnection.createDataConnection(out, in);
+        if (DataConnection.createDataConnection(out, in)) {
+            InputStream dataInputStream = DataConnection.getDataInputStream();
 
-        InputStream dataInputStream = DataConnection.getDataInputStream();
+            // get the file
+            System.out.println(REQUEST_PREFIX + "RETR " + fileName);
+            out.println("RETR " + fileName);
 
-        // get the file
-        System.out.println(REQUEST_PREFIX + "RETR " + fileName);
-        out.println("RETR " + fileName);
+            // print all responses
+            printResponse(in);
 
-        // print all responses
-        printResponse(in);
+            // write the file
+            FileOutputStream fileOutputStream = null;
+            try {
+                fileOutputStream = new FileOutputStream(fileName);
 
-        // write the file
-        FileOutputStream fileOutputStream = null;
-        try {
-            fileOutputStream = new FileOutputStream(fileName);
+                int b;
 
-            int b;
-
-            while ((b = dataInputStream.read()) != -1) {
-                fileOutputStream.write(b);
-            }
-        } catch (IOException e) {
-            System.out.println("0xFFFF Processing error. Writing file IO error, terminating.");
-            System.exit(1);
-        } finally {
-            if (fileOutputStream != null) {
-                try {
-                    fileOutputStream.close();
-                } catch (IOException e) {
-                    System.out.println("0xFFFF Processing error. Cannot close the file output stream, terminating.");
-                    System.exit(1);
+                while ((b = dataInputStream.read()) != -1) {
+                    fileOutputStream.write(b);
+                }
+            } catch (IOException e) {
+                System.out.println("0xFFFF Processing error. Writing file IO error, terminating.");
+                System.exit(1);
+            } finally {
+                if (fileOutputStream != null) {
+                    try {
+                        fileOutputStream.close();
+                    } catch (IOException e) {
+                        System.out.println("0xFFFF Processing error. Cannot close the file output stream, terminating.");
+                        System.exit(1);
+                    }
                 }
             }
+
+            // print all remaining control responses
+            printResponse(in);
+
+            // close the data connection
+            DataConnection.closeDataConnection();
+        } else {
+            printResponse(in);
         }
-
-        // print all remaining control responses
-        printResponse(in);
-
-        // close the data connection
-        DataConnection.closeDataConnection();
     }
 
     private static boolean closeSocket(Socket socket) {
@@ -260,12 +264,16 @@ public class CSftp {
             return dataIn;
         }
 
-        public static void createDataConnection(PrintWriter out, BufferedReader in) {
+        public static boolean createDataConnection(PrintWriter out, BufferedReader in) {
             DataConnectionData dataConnectionData = getDataConnectionData(out, in);
 
             if (dataConnectionData != null) {
                 String host = dataConnectionData.getHost();
                 int port = dataConnectionData.getPort();
+
+                if (host == null || port == -1) {
+                    return false;
+                }
 
                 try {
                     dataSocket = new Socket(host, port);
@@ -279,7 +287,11 @@ public class CSftp {
                     System.err.println("0x3A7 Data transfer connection I/O error, closing data connection.");
                     System.exit(1);
                 }
+
+                return true;
             }
+
+            return false;
         }
 
         private static DataConnectionData getDataConnectionData(PrintWriter out, BufferedReader in) {
@@ -345,10 +357,16 @@ public class CSftp {
             private void parseResponse(String response) {
                 int openParenthesisIndex = response.indexOf("(");
                 int closingParenthesisIndex = response.indexOf(")");
-                String[] hostsPortsNumbers = response.substring(openParenthesisIndex+1, closingParenthesisIndex).split(",");
 
-                host = hostsPortsNumbers[0] + "." + hostsPortsNumbers[1] + "." + hostsPortsNumbers[2] + "." + hostsPortsNumbers[3];
-                port = Integer.parseInt(hostsPortsNumbers[4]) * 256 + Integer.parseInt(hostsPortsNumbers[5]);
+                if (openParenthesisIndex != -1 && closingParenthesisIndex != -1) {
+                    String[] hostsPortsNumbers = response.substring(openParenthesisIndex+1, closingParenthesisIndex).split(",");
+
+                    host = hostsPortsNumbers[0] + "." + hostsPortsNumbers[1] + "." + hostsPortsNumbers[2] + "." + hostsPortsNumbers[3];
+                    port = Integer.parseInt(hostsPortsNumbers[4]) * 256 + Integer.parseInt(hostsPortsNumbers[5]);
+                } else {
+                    host = null;
+                    port = -1;
+                }
             }
         }
     }
