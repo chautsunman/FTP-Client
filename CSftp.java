@@ -73,6 +73,11 @@ public class CSftp {
                 if (len <= 0)
                     break;
 
+                // ignore empty lines and lines starting with "#"
+                if (command.trim().length() == 0 || (command.length() > 0 && command.indexOf("#") == 0)) {
+                    continue;
+                }
+
                 // Start processing the command here.
                 if (command.equals("quit")) {
                     // close the connection
