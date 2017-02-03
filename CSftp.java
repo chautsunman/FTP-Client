@@ -39,13 +39,16 @@ public class CSftp {
         // If the arguments are invalid or there aren't enough of them
             // then exit.
 
-        if (args.length != ARG_CNT) {
+        if (args.length != 2 && args.length != 1) {
             System.out.print("Usage: cmd ServerAddress ServerPort\n");
             return;
         }
 
         String hostName = args[0];
-        int hostPort = Integer.parseInt(args[1]);
+        int hostPort = 21;
+        if (args.length == 2) {
+            hostPort = Integer.parseInt(args[1]);
+        }
 
         try (
             // create a socket
