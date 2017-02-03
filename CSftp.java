@@ -93,7 +93,10 @@ public class CSftp {
                     break;
                 }
 
-                String[] commandSplit = command.split(" ");
+                // trim trailing whitespace
+                command = command.replaceAll("\\s++$", "");
+
+                String[] commandSplit = command.split("\\s+");
                 int commandSplitLen = commandSplit.length;
 
                 if (commandSplitLen == 2 && commandSplit[0].equals("user")) {
@@ -114,7 +117,7 @@ public class CSftp {
                 } else if (commandSplitLen == 2 && commandSplit[0].equals("get")) {
                     // get REMOTE
                     getFile(out, commandSplit[1], in);
-                } else if (!isValidCommand(command)) {
+                } else if (!isValidCommand(commandSplit[0])) {
                     // the command is not one of the supported commands
                     System.out.println("0x001 Invalid command.");
                 } else {
@@ -133,10 +136,8 @@ public class CSftp {
 
     // check if the command is supported (valid)
     private static boolean isValidCommand(String command) {
-        String mainCommand = command.split(" ")[0];
-
         for (String validCommand : validCommands) {
-            if (mainCommand.equals(validCommand)) {
+            if (command.equals(validCommand)) {
                 return true;
             }
         }
