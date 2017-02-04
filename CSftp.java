@@ -1,4 +1,3 @@
-
 import java.lang.System;
 import java.io.IOException;
 
@@ -13,6 +12,9 @@ import java.util.Arrays;
 //
 
 
+/**
+ * A FTP client
+ */
 public class CSftp {
     static final int MAX_LEN = 255;
     static final int ARG_CNT = 2;
@@ -38,7 +40,6 @@ public class CSftp {
         // Get command line arguments and connected to FTP
         // If the arguments are invalid or there aren't enough of them
             // then exit.
-
         if (args.length != 2 && args.length != 1) {
             System.out.print("Usage: cmd ServerAddress ServerPort\n");
             return;
@@ -63,6 +64,7 @@ public class CSftp {
 
             for (int len = 1; len > 0;) {
                 System.out.print("csftp> ");
+                // read command input
                 try {
                     len = System.in.read(cmdString);
                 } catch (IOException exception) {
@@ -71,15 +73,19 @@ public class CSftp {
                     System.exit(1);
                 }
 
-                command = (new String(Arrays.copyOfRange(cmdString, 0, len-1)));
-
                 if (len <= 0)
                     break;
+
+                // parse command as character string
+                command = (new String(Arrays.copyOfRange(cmdString, 0, len-1)));
 
                 // ignore empty lines and lines starting with "#"
                 if (command.trim().length() == 0 || (command.length() > 0 && command.indexOf("#") == 0)) {
                     continue;
                 }
+
+                // trim trailing whitespace
+                command = command.replaceAll("\\s++$", "");
 
                 // Start processing the command here.
                 if (command.equals("quit")) {
@@ -93,9 +99,7 @@ public class CSftp {
                     break;
                 }
 
-                // trim trailing whitespace
-                command = command.replaceAll("\\s++$", "");
-
+                // split the command input to command and arguments
                 String[] commandSplit = command.split("\\s+");
                 int commandSplitLen = commandSplit.length;
 
@@ -134,8 +138,14 @@ public class CSftp {
         }
     }
 
-    // check if the command is supported (valid)
+    /**
+     * Check if the command is supported (valid)
+     *
+     * @param command the command inputed
+     * @return whether the command is supported
+     */
     private static boolean isValidCommand(String command) {
+        // compare the input command to all supported commands
         for (String validCommand : validCommands) {
             if (command.equals(validCommand)) {
                 return true;
@@ -145,16 +155,32 @@ public class CSftp {
         return false;
     }
 
+    /**
+     * Send the command to the server and print the responses
+     *
+     * @param out the output stream to send the command
+     * @param command the command to be sent
+     * @param in the input stream to get responses
+     */
     private static void sendRequest(PrintWriter out, String command, BufferedReader in) {
         System.out.println(REQUEST_PREFIX + command);
 
+        // send the command
         out.println(command);
+        // print the responses
         printResponse(in);
     }
 
+    /**
+     * Print all responses from the server
+     *
+     * @param in the input stream to read responses from
+     */
     private static void printResponse(BufferedReader in) {
         try {
             String response;
+
+            // read and print all responses
             while ((response = in.readLine()) != null) {
                 System.out.println(RESPONSE_PREFIX + response);
             }
@@ -166,6 +192,12 @@ public class CSftp {
         }
     }
 
+    /**
+     * List the directory in the server's working directory
+     *
+     * @param out the output stream to send the LIST command
+     * @param in the input stream to get control responses
+     */
     private static void listDirectory(PrintWriter out, BufferedReader in) {
         // create the data connection
         if (DataConnection.createDataConnection(out, in)) {
@@ -175,17 +207,26 @@ public class CSftp {
             System.out.println(REQUEST_PREFIX + "LIST");
             out.println("LIST");
 
-            // print all responses
+            // print control responses
             printResponse(in);
+            // print data responses
             printResponse(dataIn);
 
             // close the data connection
             DataConnection.closeDataConnection();
         } else {
+            // print control responses if the data connection was not created successfully
             printResponse(in);
         }
     }
 
+    /**
+     * Get a file from the server
+     *
+     * @param out the output stream to send the RETR command
+     * @param fileName the filename of the file to get
+     * @param in the input stream to get control responses
+     */
     private static void getFile(PrintWriter out, String fileName, BufferedReader in) {
         // create the data connection
         if (DataConnection.createDataConnection(out, in)) {
@@ -197,6 +238,7 @@ public class CSftp {
 
             boolean fileNotFound = false;
 
+            // check if the file requested exist on the server's working directory
             try {
                 String response = in.readLine();
 
@@ -212,7 +254,7 @@ public class CSftp {
                 System.exit(1);
             }
 
-            // print all responses
+            // print control responses
             printResponse(in);
 
             // return if the file is not found on the server
@@ -223,13 +265,14 @@ public class CSftp {
                 return;
             }
 
-            // write the file
+            // get the remote file and write the local file
             FileOutputStream fileOutputStream = null;
             try {
                 fileOutputStream = new FileOutputStream(fileName);
 
                 int b;
 
+                // read and write all data
                 while ((b = dataInputStream.read()) != -1) {
                     fileOutputStream.write(b);
                 }
@@ -240,6 +283,7 @@ public class CSftp {
             } catch (IOException e) {
                 System.out.println("0x38E Access to local file " + fileName + " denied.");
             } finally {
+                // close the file output stream
                 if (fileOutputStream != null) {
                     try {
                         fileOutputStream.close();
@@ -250,16 +294,23 @@ public class CSftp {
                 }
             }
 
-            // print all remaining control responses
+            // print remaining control responses
             printResponse(in);
 
             // close the data connection
             DataConnection.closeDataConnection();
         } else {
+            // print control responses if the data connection was not created successfully
             printResponse(in);
         }
     }
 
+    /**
+     * Close the socket
+     *
+     * @param socket the socket to be closed
+     * @return whether the socket is closed successfully
+     */
     private static boolean closeSocket(Socket socket) {
         if (socket == null || socket.isClosed()) {
             return true;
@@ -276,34 +327,62 @@ public class CSftp {
     }
 
 
+    /**
+     * A class for managing FTP data connection
+     */
     private static class DataConnection {
         static Socket dataSocket;
         static InputStream dataInputStream;
         static BufferedReader dataIn;
 
+        /**
+         * Get the data connection socket
+         *
+         * @return the data connection socket
+         */
         public static Socket getDataSocket() {
             return dataSocket;
         }
 
+        /**
+         * Get the data connection raw input stream
+         *
+         * @return the data connection input stream
+         */
         public static InputStream getDataInputStream() {
             return dataInputStream;
         }
 
+        /**
+         * Get the reader for the data connection input stream
+         *
+         * @return the reader for the data connection input stream
+         */
         public static BufferedReader getDataIn() {
             return dataIn;
         }
 
+        /**
+         * Create a data connection
+         *
+         * @param out the output stream to send control command
+         * @param in the input stream to get control responses
+         * @return whether the data connection is created successfully
+         */
         public static boolean createDataConnection(PrintWriter out, BufferedReader in) {
+            // get the data connection data
             DataConnectionData dataConnectionData = getDataConnectionData(out, in);
 
             if (dataConnectionData != null) {
                 String host = dataConnectionData.getHost();
                 int port = dataConnectionData.getPort();
 
+                // the data connection cannot be created if the data connection data could not be parsed successfully
                 if (host == null || port == -1) {
                     return false;
                 }
 
+                // create the data connection
                 try {
                     dataSocket = new Socket(host, port);
                     dataSocket.setSoTimeout(500);
@@ -323,11 +402,20 @@ public class CSftp {
             return false;
         }
 
+        /**
+         * Get the data connection data
+         *
+         * @param out the output stream to send the PASV command
+         * @param in the input stream to get responses for data connection
+         * @return the data connection data
+         */
         private static DataConnectionData getDataConnectionData(PrintWriter out, BufferedReader in) {
             System.out.println(REQUEST_PREFIX + "PASV");
 
+            // request a passive data connection
             out.println("PASV");
 
+            // get the response, parse and return it as data connection data
             try {
                 String response = in.readLine();
 
@@ -345,11 +433,17 @@ public class CSftp {
             return null;
         }
 
+        /**
+         * Close the data connection
+         *
+         * @return whether the data connection is closed successfully
+         */
         private static boolean closeDataConnection() {
             if (dataSocket == null || dataSocket.isClosed()) {
                 return true;
             }
 
+            // close the data socket and deallocate the resources
             try {
                 dataSocket.close();
             } catch (IOException e) {
@@ -367,22 +461,45 @@ public class CSftp {
         }
 
 
+        /**
+         * A data structure for data connection data
+         */
         private static class DataConnectionData {
             String host;
             int port;
 
+            /**
+             * Constructor, parse the passive data connection request's response
+             *
+             * @param passiveRequestResponse the request's response
+             */
             public DataConnectionData(String passiveRequestResponse) {
                 parseResponse(passiveRequestResponse);
             }
 
+            /**
+             * Get the host for the data connection
+             *
+             * @return the host for data connection
+             */
             public String getHost() {
                 return host;
             }
 
+            /**
+             * Get the port for the data connection
+             *
+             * @return the port for data connection
+             */
             public int getPort() {
                 return port;
             }
 
+            /**
+             * Parse the passive data connection request's response as host and port
+             *
+             * @param response the response to be parsed
+             */
             private void parseResponse(String response) {
                 int openParenthesisIndex = response.indexOf("(");
                 int closingParenthesisIndex = response.indexOf(")");
