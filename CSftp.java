@@ -211,6 +211,8 @@ public class CSftp {
             printResponse(in);
             // print data responses
             printResponse(dataIn);
+            // print remaining control responses
+            printResponse(in);
 
             // close the data connection
             DataConnection.closeDataConnection();
@@ -385,7 +387,6 @@ public class CSftp {
                 // create the data connection
                 try {
                     dataSocket = new Socket(host, port);
-                    dataSocket.setSoTimeout(500);
                     dataInputStream = dataSocket.getInputStream();
                     dataIn = new BufferedReader(new InputStreamReader(dataInputStream));
                 } catch (UnknownHostException e) {
