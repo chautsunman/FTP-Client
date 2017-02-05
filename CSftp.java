@@ -166,7 +166,8 @@ public class CSftp {
         System.out.println(REQUEST_PREFIX + command);
 
         // send the command
-        out.println(command);
+        out.print(command + "\r\n");
+        out.flush();
         // print the responses
         printResponse(in, RESPONSE_PREFIX);
     }
@@ -205,7 +206,8 @@ public class CSftp {
 
             // list all the files
             System.out.println(REQUEST_PREFIX + "LIST");
-            out.println("LIST");
+            out.print("LIST" + "\r\n");
+            out.flush();
 
             // print control responses
             printResponse(in, RESPONSE_PREFIX);
@@ -236,7 +238,8 @@ public class CSftp {
 
             // get the file
             System.out.println(REQUEST_PREFIX + "RETR " + fileName);
-            out.println("RETR " + fileName);
+            out.println("RETR " + fileName + "\r\n");
+            out.flush();
 
             boolean fileNotFound = false;
 
@@ -414,7 +417,8 @@ public class CSftp {
             System.out.println(REQUEST_PREFIX + "PASV");
 
             // request a passive data connection
-            out.println("PASV");
+            out.println("PASV" + "\r\n");
+            out.flush();
 
             // get the response, parse and return it as data connection data
             try {
