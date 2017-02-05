@@ -58,9 +58,9 @@ public class CSftp {
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         ) {
             // set socket timeout for reading responses
-            socket.setSoTimeout(500);
+            socket.setSoTimeout(1000);
 
-            printResponse(in);
+            printResponse(in, RESPONSE_PREFIX);
 
             for (int len = 1; len > 0;) {
                 System.out.print("csftp> ");
@@ -168,7 +168,7 @@ public class CSftp {
         // send the command
         out.println(command);
         // print the responses
-        printResponse(in);
+        printResponse(in, RESPONSE_PREFIX);
     }
 
     /**
@@ -176,13 +176,13 @@ public class CSftp {
      *
      * @param in the input stream to read responses from
      */
-    private static void printResponse(BufferedReader in) {
+    private static void printResponse(BufferedReader in, String prefix) {
         try {
             String response;
 
             // read and print all responses
             while ((response = in.readLine()) != null) {
-                System.out.println(RESPONSE_PREFIX + response);
+                System.out.println(prefix + response);
             }
         } catch (SocketTimeoutException e) {
             // stop waiting for more responses
@@ -208,17 +208,17 @@ public class CSftp {
             out.println("LIST");
 
             // print control responses
-            printResponse(in);
+            printResponse(in, RESPONSE_PREFIX);
             // print data responses
-            printResponse(dataIn);
+            printResponse(dataIn, "");
             // print remaining control responses
-            printResponse(in);
+            printResponse(in, RESPONSE_PREFIX);
 
             // close the data connection
             DataConnection.closeDataConnection();
         } else {
             // print control responses if the data connection was not created successfully
-            printResponse(in);
+            printResponse(in, RESPONSE_PREFIX);
         }
     }
 
@@ -257,7 +257,7 @@ public class CSftp {
             }
 
             // print control responses
-            printResponse(in);
+            printResponse(in, RESPONSE_PREFIX);
 
             // return if the file is not found on the server
             if (fileNotFound) {
@@ -297,13 +297,13 @@ public class CSftp {
             }
 
             // print remaining control responses
-            printResponse(in);
+            printResponse(in, RESPONSE_PREFIX);
 
             // close the data connection
             DataConnection.closeDataConnection();
         } else {
             // print control responses if the data connection was not created successfully
-            printResponse(in);
+            printResponse(in, RESPONSE_PREFIX);
         }
     }
 
